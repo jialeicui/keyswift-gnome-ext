@@ -1,0 +1,9 @@
+{
+  "name": "KeySwift",
+  "description": "gnome extension for KeySwift",
+  "uuid": "keyswift@jialeicui.github.io",
+  "no-cache": true,
+  "shell-version": [
+    "45", "46", "47"
+  ]
+}
