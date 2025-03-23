@@ -9,6 +9,19 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
+// D-Bus interface XML
+const ifaceXml = `
+<node>
+  <interface name="com.github.keyswift.WindowMonitor">
+    <method name="GetActiveWindow">
+      <arg type="s" direction="out" name="windowInfo"/>
+    </method>
+    <signal name="StatusChanged">
+      <arg type="b" name="isConnected"/>
+    </signal>
+  </interface>
+</node>`;
+
 const StatusIndicator = GObject.registerClass(
 class StatusIndicator extends PanelMenu.Button {
     constructor() {
@@ -33,9 +46,26 @@ class StatusIndicator extends PanelMenu.Button {
 
 export default class QuickSettingsExampleExtension extends Extension {
     enable() {
+        // Initialize current window info
+        this._currentWindowInfo = {
+            class: '',
+            title: ''
+        };
+
         // Create and add the status indicator to the panel
         this._statusIndicator = new StatusIndicator();
         Main.panel.addToStatusArea('status-indicator', this._statusIndicator, 0, 'right');
+
+        // Set up D-Bus interface
+        this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(ifaceXml, {
+            GetActiveWindow: () => {
+                // Show smile face when method is called
+                this._statusIndicator.setSuccess();
+                return JSON.stringify(this._currentWindowInfo);
+            }
+        });
+
+        this._dbusImpl.export(Gio.DBus.session, '/com/github/keyswift/WindowMonitor');
 
         this._handlerId = global.display.connect('notify::focus-window', () => {
             let window = global.display.focus_window;
@@ -47,6 +77,12 @@ export default class QuickSettingsExampleExtension extends Extension {
                 title = window.get_title();
             }
 
+            // Update current window info
+            this._currentWindowInfo = {
+                class: wmClass || '',
+                title: title || ''
+            };
+
             // Send the wmClass and title to D-Bus server
             this._sendWindowInfoToDbus(wmClass, title);
         });
@@ -56,6 +92,10 @@ export default class QuickSettingsExampleExtension extends Extension {
         if (focusWindow) {
             const wmClass = focusWindow.get_wm_class();
             const title = focusWindow.get_title();
+            this._currentWindowInfo = {
+                class: wmClass || '',
+                title: title || ''
+            };
             this._sendWindowInfoToDbus(wmClass, title);
         }
     }
@@ -92,8 +132,7 @@ export default class QuickSettingsExampleExtension extends Extension {
                 (connection, result) => {
                     try {
                         connection.call_finish(result);
-                        // Show smile icon on success
-                        this._statusIndicator.setSuccess();
+                        // Don't show smile icon here anymore since we want to show it only on external calls
                     } catch (e) {
                         // Show cry icon on failure
                         this._statusIndicator.setError();
@@ -115,10 +154,19 @@ export default class QuickSettingsExampleExtension extends Extension {
             this._handlerId = undefined;
         }
 
+        // Unexport D-Bus interface
+        if (this._dbusImpl) {
+            this._dbusImpl.unexport();
+            this._dbusImpl = null;
+        }
+
         // Remove and destroy the status indicator
         if (this._statusIndicator) {
             this._statusIndicator.destroy();
             this._statusIndicator = null;
         }
+
+        // Clear current window info
+        this._currentWindowInfo = null;
     }
 }
