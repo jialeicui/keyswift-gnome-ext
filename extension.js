@@ -103,9 +103,9 @@ export default class QuickSettingsExampleExtension extends Extension {
     _sendWindowInfoToDbus(wmClass, title) {
         try {
             // D-Bus parameters defined in the comment at the top of the file
-            const busName = 'com.github.keyswift.WindowMonitor';
-            const busPath = '/com/github/keyswift/WindowMonitor';
-            const busInterface = 'com.github.keyswift.WindowMonitor';
+            const busName = 'com.github.keyswift.WinInfoReceiver';
+            const busPath = '/com/github/keyswift/WinInfoReceiver';
+            const busInterface = 'com.github.keyswift.WinInfoReceiver';
             const methodName = 'UpdateActiveWindow';
 
             // Create JSON object with both wmClass and title
