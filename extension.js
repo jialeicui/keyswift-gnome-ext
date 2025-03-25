@@ -132,7 +132,7 @@ export default class QuickSettingsExampleExtension extends Extension {
                 (connection, result) => {
                     try {
                         connection.call_finish(result);
-                        // Don't show smile icon here anymore since we want to show it only on external calls
+						this._statusIndicator.setSuccess();
                     } catch (e) {
                         // Show cry icon on failure
                         this._statusIndicator.setError();
